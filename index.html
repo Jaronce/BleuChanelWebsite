@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BLEU DE CHANEL — The Parfum</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Playfair+Display:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --concrete: #d4cfc8;
+      --concrete-dim: #9e9890;
+      --stone: #706050;
+      --charcoal: #1a1816;
+      --ink: #0a0908;
+      --warm-white: #f4f0ea;
+      --warm-white-dim: #c8c0b4;
+      --accent: #2d4a7a;
+      --accent-glow: rgba(45, 74, 122, 0.4);
+      --accent-soft: rgba(45, 74, 122, 0.08);
+      --accent-bright: #4a72b8;
+      --gold: #c8a870;
+      --gold-dim: rgba(200, 168, 112, 0.4);
+      --heading: 'Playfair Display', 'Georgia', serif;
+      --body: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--ink);
+      color: var(--warm-white);
+      font-family: var(--body);
+      font-weight: 300;
+      overflow-x: hidden;
+      cursor: none;
+    }
+
+    /* ─── CURSOR ─── */
+    #cursor-dot {
+      position: fixed; top: 0; left: 0; width: 6px; height: 6px;
+      background: var(--warm-white); border-radius: 50%;
+      pointer-events: none; z-index: 9998;
+      transform: translate(-50%, -50%);
+      mix-blend-mode: difference;
+      transition: transform 0.05s;
+    }
+    #cursor-ring {
+      position: fixed; top: 0; left: 0; width: 36px; height: 36px;
+      border: 1px solid rgba(244,240,234,0.5); border-radius: 50%;
+      pointer-events: none; z-index: 9997;
+      transform: translate(-50%, -50%);
+      transition: width 0.25s, height 0.25s, border-color 0.25s, box-shadow 0.25s;
+    }
+    #cursor-ring.hover {
+      width: 56px; height: 56px;
+      border-color: var(--accent-bright);
+      box-shadow: 0 0 18px var(--accent-glow);
+    }
+    @media (pointer: coarse) { #cursor-dot, #cursor-ring { display: none; } body { cursor: auto; } }
+
+    /* ─── FILM GRAIN ─── */
+    #grain {
+      position: fixed; inset: 0; z-index: 100; pointer-events: none;
+      opacity: 0.035;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-size: 256px 256px;
+      animation: grain-drift 0.5s steps(1) infinite;
+    }
+    @keyframes grain-drift {
+      0%  { background-position: 0 0; }
+      10% { background-position: -5% -10%; }
+      20% { background-position: -15% 5%; }
+      30% { background-position: 7% -25%; }
+      40% { background-position: -5% 25%; }
+      50% { background-position: -15% 10%; }
+      60% { background-position: 15% 0; }
+      70% { background-position: 0 15%; }
+      80% { background-position: 3% 35%; }
+      90% { background-position: -10% 10%; }
+    }
+
+    /* ─── VIGNETTE ─── */
+    #vignette {
+      position: fixed; inset: 0; z-index: 99; pointer-events: none;
+      background: radial-gradient(ellipse at center, transparent 50%, rgba(10,9,8,0.5) 100%);
+    }
+
+    /* ─── PARTICLES ─── */
+    #particles {
+      position: fixed; inset: 0; z-index: 15; pointer-events: none;
+      opacity: 0.35;
+    }
+
+    /* ─── LOADER ─── */
+    #loader {
+      position: fixed; inset: 0; z-index: 9999;
+      background: var(--ink);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: opacity 0.8s ease, filter 0.8s ease;
+    }
+    #loader.out { opacity: 0; filter: blur(8px); pointer-events: none; }
+    .loader-brand {
+      font-family: var(--heading); font-weight: 300; font-size: 13px;
+      letter-spacing: 0.45em; color: var(--warm-white); margin-bottom: 32px;
+      text-transform: uppercase;
+    }
+    .loader-lines {
+      display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 28px;
+    }
+    .loader-line { width: 40px; height: 1px; background: var(--stone); }
+    .loader-bar-wrap {
+      width: 140px; height: 1px; background: rgba(244,240,234,0.1); position: relative;
+    }
+    .loader-bar {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, var(--accent-bright), var(--gold));
+      transition: width 0.1s linear;
+    }
+    .loader-pct {
+      margin-top: 12px; font-size: 10px; letter-spacing: 0.2em;
+      color: var(--concrete-dim); font-family: var(--body); font-weight: 300;
+    }
+
+    /* ─── CHAPTER MARKERS ─── */
+    #chapters {
+      position: fixed; right: 24px; top: 50%; transform: translateY(-50%);
+      z-index: 50; display: flex; flex-direction: column; align-items: center; gap: 0;
+      pointer-events: none;
+    }
+    .chap-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      border: 1px solid rgba(244,240,234,0.3);
+      background: transparent; position: relative; pointer-events: auto; cursor: pointer;
+      transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
+    }
+    .chap-dot.active {
+      background: var(--accent-bright);
+      border-color: var(--accent-bright);
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+    .chap-dot .chap-label {
+      position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+      font-size: 8px; letter-spacing: 0.25em; color: var(--concrete-dim);
+      white-space: nowrap; opacity: 0; transition: opacity 0.2s; text-transform: uppercase;
+      font-family: var(--body); font-weight: 500;
+    }
+    .chap-dot:hover .chap-label { opacity: 1; }
+    .chap-line {
+      width: 1px; height: 20px;
+      background: rgba(244,240,234,0.12);
+      position: relative; overflow: hidden;
+    }
+    .chap-line-fill {
+      position: absolute; top: 0; left: 0; width: 100%; height: 0%;
+      background: var(--accent-bright);
+      transition: height 0.1s linear;
+    }
+
+    /* ─── ANIMATION SECTION ─── */
+    #anim-section {
+      position: relative;
+      height: 650vh;
+    }
+    #canvas-container {
+      position: sticky; top: 0; width: 100%; height: 100vh; overflow: hidden;
+    }
+    #main-canvas {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: cover; display: block;
+    }
+    #left-grad {
+      position: absolute; top: 0; left: 0; bottom: 0; width: 45%;
+      background: linear-gradient(to right, rgba(10,9,8,0.72) 0%, transparent 100%);
+      pointer-events: none;
+    }
+    #bottom-grad {
+      position: absolute; bottom: 0; left: 0; right: 0; height: 30%;
+      background: linear-gradient(to top, rgba(10,9,8,0.55) 0%, transparent 100%);
+      pointer-events: none;
+    }
+    #tint-overlay {
+      position: absolute; inset: 0; pointer-events: none; z-index: 5;
+      opacity: 0;
+      background: linear-gradient(135deg, var(--accent-soft) 0%, rgba(200,168,112,0.04) 100%);
+      transition: opacity 0.6s ease;
+    }
+
+    /* ─── SCROLL TEXT ─── */
+    .scroll-text {
+      position: fixed; z-index: 10; pointer-events: none;
+      opacity: 0; transform: translateX(-20px);
+      filter: blur(6px);
+      transition: opacity 0.7s ease, transform 0.7s ease, filter 0.7s ease;
+    }
+    .scroll-text.visible {
+      opacity: 1; transform: translateX(0); filter: blur(0);
+      pointer-events: auto;
+    }
+
+    /* SECTION 1 — HERO */
+    #sec-hero {
+      left: 6%; bottom: 12%; max-width: 560px;
+    }
+    .hero-overline {
+      font-size: 8.5px; letter-spacing: 0.4em; color: var(--gold);
+      font-weight: 500; text-transform: uppercase; margin-bottom: 16px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .hero-overline::before {
+      content: ''; display: block; width: 28px; height: 1px; background: var(--gold);
+    }
+    .hero-title {
+      font-family: var(--heading); font-weight: 300;
+      font-size: clamp(42px, 5.5vw, 72px);
+      line-height: 1.05; color: var(--warm-white);
+      letter-spacing: -0.01em; margin-bottom: 6px;
+    }
+    .hero-title em {
+      font-style: italic; color: var(--gold);
+    }
+    .hero-sub {
+      font-family: var(--heading); font-style: italic;
+      font-size: clamp(14px, 1.6vw, 20px);
+      color: var(--warm-white-dim); letter-spacing: 0.02em;
+      margin-bottom: 28px; font-weight: 300;
+    }
+    .stat-bar {
+      display: flex; gap: 0; margin-top: 8px;
+      background: rgba(244,240,234,0.03);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(244,240,234,0.07);
+      border-radius: 2px; overflow: hidden;
+    }
+    .stat-cell {
+      flex: 1; padding: 14px 16px; position: relative;
+      border-right: 1px solid rgba(244,240,234,0.06);
+      transition: background 0.25s;
+    }
+    .stat-cell:last-child { border-right: none; }
+    .stat-cell:hover { background: rgba(244,240,234,0.06); }
+    .stat-num {
+      font-family: var(--heading); font-size: 22px; font-weight: 300;
+      color: var(--warm-white); letter-spacing: -0.02em; line-height: 1;
+    }
+    .stat-label {
+      font-size: 7.5px; letter-spacing: 0.25em; color: var(--concrete-dim);
+      text-transform: uppercase; font-weight: 500; margin-top: 4px;
+    }
+
+    /* SECTION 2 — VISION */
+    #sec-vision {
+      left: 8%; top: 50%; transform: translateY(-50%) translateX(-20px);
+      max-width: 520px;
+    }
+    #sec-vision.visible {
+      transform: translateY(-50%) translateX(0);
+    }
+    .vision-quote-mark {
+      font-family: var(--heading); font-size: 120px; line-height: 0.6;
+      color: var(--accent-bright); opacity: 0.3; margin-bottom: 8px;
+      font-style: italic;
+    }
+    .vision-quote {
+      font-family: var(--heading); font-style: italic; font-weight: 300;
+      font-size: clamp(18px, 2.4vw, 30px); line-height: 1.45;
+      color: var(--warm-white); margin-bottom: 24px;
+    }
+    .vision-divider {
+      width: 40px; height: 1px; background: var(--gold); margin-bottom: 14px;
+    }
+    .vision-attr {
+      font-size: 10px; letter-spacing: 0.3em; color: var(--gold);
+      text-transform: uppercase; font-weight: 500;
+    }
+
+    /* SECTION 3 — DETAILS */
+    #sec-details {
+      left: 6%; top: 50%; transform: translateY(-50%) translateX(-20px);
+      max-width: 500px;
+    }
+    #sec-details.visible { transform: translateY(-50%) translateX(0); }
+    .sec-overline {
+      font-size: 8.5px; letter-spacing: 0.4em; color: var(--gold);
+      font-weight: 500; text-transform: uppercase; margin-bottom: 16px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .sec-overline::before {
+      content: ''; display: block; width: 20px; height: 1px; background: var(--gold);
+    }
+    .sec-title {
+      font-family: var(--heading); font-weight: 300;
+      font-size: clamp(26px, 3vw, 40px); line-height: 1.15;
+      color: var(--warm-white); margin-bottom: 14px;
+    }
+    .sec-body {
+      font-size: 13px; line-height: 1.75; color: var(--concrete-dim);
+      margin-bottom: 22px; max-width: 420px;
+    }
+    .detail-list { list-style: none; }
+    .detail-list li {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 9px 0; border-bottom: 1px solid rgba(244,240,234,0.05);
+      font-size: 12px; color: var(--warm-white-dim); letter-spacing: 0.03em;
+    }
+    .detail-list li:last-child { border-bottom: none; }
+    .detail-icon {
+      width: 16px; height: 16px; flex-shrink: 0; margin-top: 1px;
+      color: var(--gold); opacity: 0.8;
+    }
+    .detail-label { font-weight: 500; color: var(--concrete); margin-right: 6px; }
+
+    /* SECTION 4 — GRID */
+    #sec-grid {
+      left: 6%; top: 50%; transform: translateY(-50%) translateX(-20px);
+      max-width: 580px;
+    }
+    #sec-grid.visible { transform: translateY(-50%) translateX(0); }
+    .amenity-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 20px;
+    }
+    .amenity-cell {
+      background: rgba(244,240,234,0.03);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(244,240,234,0.06); border-radius: 2px;
+      padding: 16px 18px;
+      transition: background 0.25s, border-color 0.25s;
+    }
+    .amenity-cell:hover {
+      background: rgba(244,240,234,0.07);
+      border-color: rgba(74, 114, 184, 0.3);
+    }
+    .amenity-icon { font-size: 18px; margin-bottom: 8px; }
+    .amenity-name {
+      font-size: 11px; font-weight: 500; letter-spacing: 0.12em;
+      color: var(--warm-white); text-transform: uppercase; margin-bottom: 4px;
+    }
+    .amenity-desc {
+      font-size: 11px; color: var(--concrete-dim); line-height: 1.5;
+    }
+
+    /* SECTION 5 — CONTEXT */
+    #sec-context {
+      left: 6%; top: 50%; transform: translateY(-50%) translateX(-20px);
+      max-width: 480px;
+    }
+    #sec-context.visible { transform: translateY(-50%) translateX(0); }
+    .dist-list { list-style: none; margin-top: 18px; }
+    .dist-item {
+      display: flex; align-items: baseline; gap: 0;
+      padding: 10px 0; border-bottom: 1px solid rgba(244,240,234,0.05);
+      font-size: 12px;
+    }
+    .dist-item:last-child { border-bottom: none; }
+    .dist-name { color: var(--warm-white-dim); min-width: 180px; }
+    .dist-dots {
+      flex: 1; border-bottom: 1px dotted rgba(244,240,234,0.12);
+      margin: 0 10px 3px;
+    }
+    .dist-val { color: var(--gold); font-weight: 500; white-space: nowrap; }
+
+    /* SECTION 6 — CTA */
+    #sec-cta {
+      left: 50%; bottom: 10%; transform: translateX(-50%) translateX(-20px);
+      max-width: 600px; text-align: center;
+    }
+    #sec-cta.visible { transform: translateX(-50%) translateX(0); }
+    .cta-title {
+      font-family: var(--heading); font-weight: 300;
+      font-size: clamp(32px, 4.5vw, 58px); line-height: 1.1;
+      color: var(--warm-white); margin-bottom: 14px;
+    }
+    .cta-title em { font-style: italic; color: var(--gold); }
+    .cta-sub {
+      font-size: 13px; color: var(--concrete-dim); letter-spacing: 0.06em;
+      margin-bottom: 28px; text-transform: uppercase;
+    }
+    .cta-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn-primary {
+      padding: 13px 32px; background: var(--accent); color: var(--warm-white);
+      border: 1px solid var(--accent-bright); font-size: 10px; font-weight: 500;
+      letter-spacing: 0.3em; text-transform: uppercase; cursor: pointer;
+      font-family: var(--body); text-decoration: none;
+      transition: background 0.25s, box-shadow 0.25s;
+    }
+    .btn-primary:hover { background: var(--accent-bright); box-shadow: 0 0 24px var(--accent-glow); }
+    .btn-secondary {
+      padding: 13px 32px; background: transparent; color: var(--warm-white-dim);
+      border: 1px solid rgba(244,240,234,0.2); font-size: 10px; font-weight: 500;
+      letter-spacing: 0.3em; text-transform: uppercase; cursor: pointer;
+      font-family: var(--body); text-decoration: none;
+      transition: border-color 0.25s, color 0.25s;
+    }
+    .btn-secondary:hover { border-color: var(--gold); color: var(--gold); }
+    .cta-contact {
+      margin-top: 28px; padding: 18px 24px;
+      background: rgba(244,240,234,0.03);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(244,240,234,0.06);
+      display: flex; align-items: center; gap: 16px; text-align: left;
+    }
+    .cta-contact-icon { font-size: 22px; }
+    .cta-contact-name {
+      font-size: 11px; font-weight: 500; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--warm-white); margin-bottom: 3px;
+    }
+    .cta-contact-detail { font-size: 10.5px; color: var(--concrete-dim); letter-spacing: 0.05em; }
+
+    /* ─── GALLERY ─── */
+    #gallery {
+      background: #080706; padding: 100px 40px 80px;
+    }
+    .gallery-header { text-align: center; margin-bottom: 64px; }
+    .gallery-label {
+      font-size: 8.5px; letter-spacing: 0.4em; color: var(--gold);
+      text-transform: uppercase; font-weight: 500; margin-bottom: 16px;
+    }
+    .gallery-title {
+      font-family: var(--heading); font-weight: 300; font-style: italic;
+      font-size: clamp(28px, 3.5vw, 46px); color: var(--warm-white);
+    }
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px; max-width: 1200px; margin: 0 auto;
+    }
+    .gallery-item {
+      overflow: hidden; position: relative;
+      opacity: 0; transform: translateY(32px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+      background: #111;
+    }
+    .gallery-item.revealed { opacity: 1; transform: translateY(0); }
+    .gallery-item.tall { grid-row: span 2; }
+    .gallery-item img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+      transition: transform 0.6s ease;
+      min-height: 240px;
+    }
+    .gallery-item:hover img { transform: scale(1.04); }
+    .gallery-caption {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      padding: 20px 16px 16px;
+      background: linear-gradient(to top, rgba(10,9,8,0.85), transparent);
+      font-size: 10px; letter-spacing: 0.2em; color: var(--concrete-dim);
+      text-transform: uppercase; font-weight: 500;
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .gallery-item:hover .gallery-caption { opacity: 1; }
+
+    /* ─── FOOTER ─── */
+    footer {
+      background: #0c0b0a; padding: 48px 40px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 16px;
+      border-top: 1px solid rgba(244,240,234,0.05);
+    }
+    .footer-brand {
+      font-family: var(--heading); font-weight: 300; font-size: 18px;
+      letter-spacing: 0.25em; color: var(--warm-white); text-transform: uppercase;
+    }
+    .footer-legal {
+      font-size: 10px; color: var(--stone); letter-spacing: 0.1em;
+      font-weight: 300;
+    }
+    .footer-links {
+      display: flex; gap: 24px;
+    }
+    .footer-links a {
+      font-size: 9px; letter-spacing: 0.25em; color: var(--concrete-dim);
+      text-decoration: none; text-transform: uppercase; font-weight: 500;
+      transition: color 0.2s;
+    }
+    .footer-links a:hover { color: var(--gold); }
+
+    /* ─── LETTER SPLIT ─── */
+    .letter { display: inline-block; opacity: 0; transform: translateY(12px); }
+    .letter.in { opacity: 1; transform: translateY(0); transition: opacity 0.5s ease, transform 0.5s ease; }
+
+    /* ─── REDUCED MOTION ─── */
+    @media (prefers-reduced-motion: reduce) {
+      .scroll-text { transition: opacity 0.3s; }
+      #grain { animation: none; }
+    }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 768px) {
+      #sec-hero { left: 4%; right: 4%; max-width: none; }
+      #sec-vision, #sec-details, #sec-grid, #sec-context { left: 4%; right: 4%; max-width: none; }
+      #sec-cta { left: 4%; right: 4%; transform: none; }
+      #sec-cta.visible { transform: none; }
+      .gallery-grid { grid-template-columns: repeat(2, 1fr); }
+      .gallery-item.tall { grid-row: span 1; }
+      #chapters { display: none; }
+      footer { flex-direction: column; text-align: center; }
+      .footer-links { justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Cursor -->
+<div id="cursor-dot"></div>
+<div id="cursor-ring"></div>
+
+<!-- Film grain -->
+<div id="grain"></div>
+
+<!-- Vignette -->
+<div id="vignette"></div>
+
+<!-- Particles -->
+<canvas id="particles"></canvas>
+
+<!-- Loader -->
+<div id="loader">
+  <div class="loader-lines"><div class="loader-line"></div><div class="loader-line"></div></div>
+  <div class="loader-brand">Bleu de Chanel</div>
+  <div class="loader-lines"><div class="loader-line"></div><div class="loader-line"></div></div>
+  <div class="loader-bar-wrap"><div class="loader-bar" id="loader-bar"></div></div>
+  <div class="loader-pct" id="loader-pct">0%</div>
+</div>
+
+<!-- Chapter markers -->
+<nav id="chapters">
+  <div class="chap-dot active" data-chapter="0"><span class="chap-label">Essence</span></div>
+  <div class="chap-line"><div class="chap-line-fill" id="cf-0"></div></div>
+  <div class="chap-dot" data-chapter="1"><span class="chap-label">Vision</span></div>
+  <div class="chap-line"><div class="chap-line-fill" id="cf-1"></div></div>
+  <div class="chap-dot" data-chapter="2"><span class="chap-label">Notes</span></div>
+  <div class="chap-line"><div class="chap-line-fill" id="cf-2"></div></div>
+  <div class="chap-dot" data-chapter="3"><span class="chap-label">Concentrations</span></div>
+  <div class="chap-line"><div class="chap-line-fill" id="cf-3"></div></div>
+  <div class="chap-dot" data-chapter="4"><span class="chap-label">Boutiques</span></div>
+  <div class="chap-line"><div class="chap-line-fill" id="cf-4"></div></div>
+  <div class="chap-dot" data-chapter="5"><span class="chap-label">Discover</span></div>
+</nav>
+
+<!-- Animation section -->
+<section id="anim-section">
+  <div id="canvas-container">
+    <canvas id="main-canvas"></canvas>
+    <div id="left-grad"></div>
+    <div id="bottom-grad"></div>
+    <div id="tint-overlay"></div>
+  </div>
+
+  <!-- Section 1: Hero -->
+  <div class="scroll-text" id="sec-hero" data-show-at="0.0" data-hide-at="0.14">
+    <div class="hero-overline">Chanel Parfumeur — Paris</div>
+    <h1 class="hero-title" data-split>
+      BLEU<br>DE <em>CHANEL</em>
+    </h1>
+    <p class="hero-sub">Le Parfum — The highest concentration</p>
+    <div class="stat-bar">
+      <div class="stat-cell">
+        <div class="stat-num" data-target="2018">0</div>
+        <div class="stat-label">Launch Year</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num" data-target="8">0</div>
+        <div class="stat-label">Olfactory Notes</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num">$235</div>
+        <div class="stat-label">100mL Parfum</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num">100<span style="font-size:14px">mL</span></div>
+        <div class="stat-label">Volume</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Vision -->
+  <div class="scroll-text" id="sec-vision" data-show-at="0.15" data-hide-at="0.30">
+    <div class="vision-quote-mark">"</div>
+    <p class="vision-quote">
+      A man who chooses his own destiny.<br>
+      Resolute. Free. A pure, defined,<br>
+      yet unexpected scent.
+    </p>
+    <div class="vision-divider"></div>
+    <div class="vision-attr">Olivier Polge — Chanel Master Perfumer</div>
+  </div>
+
+  <!-- Section 3: Details / Notes -->
+  <div class="scroll-text" id="sec-details" data-show-at="0.31" data-hide-at="0.48">
+    <div class="sec-overline">Olfactory Architecture</div>
+    <h2 class="sec-title">The Composition</h2>
+    <p class="sec-body">
+      Crafted by Olivier Polge in 2018, the Parfum concentration distills the essence of Bleu de Chanel to its most intense and enduring form — a woody aromatic signature built for those who refuse to compromise.
+    </p>
+    <ul class="detail-list">
+      <li>
+        <svg class="detail-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="4" r="2.5"/><path d="M8 6.5v8"/></svg>
+        <span><span class="detail-label">Top Notes</span>Citrus, Labdanum, Mint, Pink Pepper</span>
+      </li>
+      <li>
+        <svg class="detail-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/></svg>
+        <span><span class="detail-label">Heart Notes</span>Ginger, Nutmeg, Jasmine, Iso E Super</span>
+      </li>
+      <li>
+        <svg class="detail-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 14c-4 0-6-2.5-6-5.5C2 5 5 2 8 1c3 1 6 4 6 7.5C14 11.5 12 14 8 14z"/></svg>
+        <span><span class="detail-label">Base Notes</span>Incense, Vetiver, Cedar, Sandalwood, White Musk</span>
+      </li>
+      <li>
+        <svg class="detail-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 14h12M4 14V8l4-6 4 6v6"/></svg>
+        <span><span class="detail-label">Sillage</span>Long-lasting, 8–12 hours projection</span>
+      </li>
+      <li>
+        <svg class="detail-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3h10v10H3z"/><path d="M3 7h10M7 3v10"/></svg>
+        <span><span class="detail-label">Concentration</span>Parfum — 20–30% aromatic compounds</span>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Section 4: Concentrations grid -->
+  <div class="scroll-text" id="sec-grid" data-show-at="0.49" data-hide-at="0.66">
+    <div class="sec-overline">Three Concentrations</div>
+    <h2 class="sec-title">The Family</h2>
+    <div class="amenity-grid">
+      <div class="amenity-cell">
+        <div class="amenity-icon">🟦</div>
+        <div class="amenity-name">Eau de Toilette</div>
+        <div class="amenity-desc">2010 · Aromatic Fougère · 50, 100, 150mL · From $105</div>
+      </div>
+      <div class="amenity-cell">
+        <div class="amenity-icon">🔷</div>
+        <div class="amenity-name">Eau de Parfum</div>
+        <div class="amenity-desc">2014 · Woody Aromatic · 50, 100mL · From $145</div>
+      </div>
+      <div class="amenity-cell">
+        <div class="amenity-icon">💎</div>
+        <div class="amenity-name">Le Parfum</div>
+        <div class="amenity-desc">2018 · Pure Parfum · 50, 100mL · From $195</div>
+      </div>
+      <div class="amenity-cell">
+        <div class="amenity-icon">🏛️</div>
+        <div class="amenity-name">Maison Chanel</div>
+        <div class="amenity-desc">Founded 1910 · 31 Rue Cambon, Paris · Since 1921 in fragrance</div>
+      </div>
+      <div class="amenity-cell">
+        <div class="amenity-icon">🌿</div>
+        <div class="amenity-name">Flacon Design</div>
+        <div class="amenity-desc">Midnight navy lacquered glass · 9-facet cap · Refillable 50mL</div>
+      </div>
+      <div class="amenity-cell">
+        <div class="amenity-icon">✦</div>
+        <div class="amenity-name">Perfumer</div>
+        <div class="amenity-desc">Olivier Polge · In-house Master Perfumer · Third generation Polge</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 5: Context / Availability -->
+  <div class="scroll-text" id="sec-context" data-show-at="0.67" data-hide-at="0.84">
+    <div class="sec-overline">Find Your Bleu</div>
+    <h2 class="sec-title">Available Worldwide</h2>
+    <p class="sec-body">
+      Bleu de Chanel is available exclusively through authorised Chanel retailers, select department stores, and Chanel.com — ensuring every bottle is accompanied by the full Chanel experience.
+    </p>
+    <ul class="dist-list">
+      <li class="dist-item">
+        <span class="dist-name">Chanel Boutiques</span>
+        <span class="dist-dots"></span>
+        <span class="dist-val">300+ Worldwide</span>
+      </li>
+      <li class="dist-item">
+        <span class="dist-name">Neiman Marcus</span>
+        <span class="dist-dots"></span>
+        <span class="dist-val">43 US Locations</span>
+      </li>
+      <li class="dist-item">
+        <span class="dist-name">Nordstrom</span>
+        <span class="dist-dots"></span>
+        <span class="dist-val">100+ US Locations</span>
+      </li>
+      <li class="dist-item">
+        <span class="dist-name">Saks Fifth Avenue</span>
+        <span class="dist-dots"></span>
+        <span class="dist-val">41 US Locations</span>
+      </li>
+      <li class="dist-item">
+        <span class="dist-name">Chanel.com</span>
+        <span class="dist-dots"></span>
+        <span class="dist-val">Free Engraving</span>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Section 6: CTA -->
+  <div class="scroll-text" id="sec-cta" data-show-at="0.85" data-hide-at="1.01">
+    <p class="sec-overline" style="justify-content:center;gap:12px;">
+      <span style="display:block;width:20px;height:1px;background:var(--gold);"></span>
+      Discover Your Concentration
+      <span style="display:block;width:20px;height:1px;background:var(--gold);"></span>
+    </p>
+    <h2 class="cta-title">
+      Choose <em>Freedom.</em><br>Choose Bleu.
+    </h2>
+    <p class="cta-sub">Eau de Toilette · Eau de Parfum · Le Parfum</p>
+    <div class="cta-buttons">
+      <a href="https://www.chanel.com/us/fragrance/men/c/6x1x1/bleu-de-chanel/" class="btn-primary" target="_blank">Shop Le Parfum</a>
+      <a href="https://www.chanel.com/us/fragrance/men/c/6x1x1/" class="btn-secondary" target="_blank">Explore the Collection</a>
+    </div>
+    <div class="cta-contact">
+      <div class="cta-contact-icon">⬡</div>
+      <div>
+        <div class="cta-contact-name">Chanel Fragrance Advisors</div>
+        <div class="cta-contact-detail">1-800-550-0005 · chanel.com · In-boutique consultation available</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Gallery -->
+<section id="gallery">
+  <div class="gallery-header">
+    <div class="gallery-label">A Cinematic Journey</div>
+    <h2 class="gallery-title">The Making of Bleu</h2>
+  </div>
+  <div class="gallery-grid" id="gallery-grid">
+    <div class="gallery-item tall" data-parallax="-30">
+      <img src="frames/desktop/frame-0001.webp" alt="Bleu de Chanel — Opening" loading="lazy" />
+      <div class="gallery-caption">The Opening</div>
+    </div>
+    <div class="gallery-item" data-parallax="20">
+      <img src="frames/desktop/frame-0018.webp" alt="Bleu de Chanel — Movement" loading="lazy" />
+      <div class="gallery-caption">Movement</div>
+    </div>
+    <div class="gallery-item" data-parallax="-15">
+      <img src="frames/desktop/frame-0036.webp" alt="Bleu de Chanel — Form" loading="lazy" />
+      <div class="gallery-caption">Form</div>
+    </div>
+    <div class="gallery-item" data-parallax="25">
+      <img src="frames/desktop/frame-0054.webp" alt="Bleu de Chanel — Essence" loading="lazy" />
+      <div class="gallery-caption">Essence</div>
+    </div>
+    <div class="gallery-item tall" data-parallax="-20">
+      <img src="frames/desktop/frame-0072.webp" alt="Bleu de Chanel — Depth" loading="lazy" />
+      <div class="gallery-caption">Depth</div>
+    </div>
+    <div class="gallery-item" data-parallax="15">
+      <img src="frames/desktop/frame-0090.webp" alt="Bleu de Chanel — Resolution" loading="lazy" />
+      <div class="gallery-caption">Resolution</div>
+    </div>
+    <div class="gallery-item" data-parallax="-10">
+      <img src="frames/desktop/frame-0108.webp" alt="Bleu de Chanel — The Finale" loading="lazy" />
+      <div class="gallery-caption">The Finale</div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-brand">Bleu de Chanel</div>
+  <div class="footer-links">
+    <a href="#">Fragrance</a>
+    <a href="#">Fashion</a>
+    <a href="#">Beauty</a>
+    <a href="#">Watches</a>
+    <a href="#">Jewellery</a>
+  </div>
+  <div class="footer-legal">© 2024 CHANEL · All rights reserved · chanel.com</div>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  // ─── CONFIG ───
+  const FRAME_COUNT = 120;
+  const FRAME_DIR_DESKTOP = 'frames/desktop/';
+  const FRAME_DIR_MOBILE  = 'frames/mobile/';
+  const LERP_FACTOR = 0.09;
+  const DWELL_CENTERS = [0.065, 0.21, 0.375, 0.535, 0.695, 0.89];
+  const DWELL_WIDTH   = 0.048;
+  const DWELL_PEAK    = 3.5;
+  const REMAP_N       = 2000;
+  const isMobile = window.innerWidth < 768;
+  const FRAME_DIR = isMobile ? FRAME_DIR_MOBILE : FRAME_DIR_DESKTOP;
+  const DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+  // ─── ELEMENTS ───
+  const canvas     = document.getElementById('main-canvas');
+  const ctx        = canvas.getContext('2d');
+  const animSec    = document.getElementById('anim-section');
+  const loaderEl   = document.getElementById('loader');
+  const loaderBar  = document.getElementById('loader-bar');
+  const loaderPct  = document.getElementById('loader-pct');
+  const tintEl     = document.getElementById('tint-overlay');
+  const sections   = Array.from(document.querySelectorAll('.scroll-text'));
+  const chapDots   = Array.from(document.querySelectorAll('.chap-dot'));
+  const chapFills  = Array.from(document.querySelectorAll('.chap-line-fill'));
+
+  // ─── CURSOR ───
+  const dot  = document.getElementById('cursor-dot');
+  const ring = document.getElementById('cursor-ring');
+  let mx = 0, my = 0, rx = 0, ry = 0;
+  document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+  document.querySelectorAll('a, button, .chap-dot').forEach(el => {
+    el.addEventListener('mouseenter', () => ring.classList.add('hover'));
+    el.addEventListener('mouseleave', () => ring.classList.remove('hover'));
+  });
+  function updateCursor() {
+    dot.style.left  = mx + 'px';
+    dot.style.top   = my + 'px';
+    rx += (mx - rx) * 0.15;
+    ry += (my - ry) * 0.15;
+    ring.style.left = rx + 'px';
+    ring.style.top  = ry + 'px';
+    requestAnimationFrame(updateCursor);
+  }
+  updateCursor();
+
+  // ─── PARTICLES ───
+  const pCanvas = document.getElementById('particles');
+  const pCtx    = pCanvas.getContext('2d');
+  let particles = [];
+  function resizeParticles() {
+    pCanvas.width  = window.innerWidth;
+    pCanvas.height = window.innerHeight;
+  }
+  function initParticles() {
+    resizeParticles();
+    particles = Array.from({ length: 40 }, () => ({
+      x: Math.random() * pCanvas.width,
+      y: Math.random() * pCanvas.height,
+      r: 0.3 + Math.random() * 1.5,
+      vx: (Math.random() - 0.5) * 0.18,
+      vy: -0.05 - Math.random() * 0.12,
+      a: 0.05 + Math.random() * 0.3,
+    }));
+  }
+  function animParticles() {
+    pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+    particles.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      if (p.y < -4) p.y = pCanvas.height + 4;
+      if (p.x < -4) p.x = pCanvas.width + 4;
+      if (p.x > pCanvas.width + 4) p.x = -4;
+      pCtx.beginPath();
+      pCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      pCtx.fillStyle = `rgba(244,240,234,${p.a})`;
+      pCtx.fill();
+    });
+    requestAnimationFrame(animParticles);
+  }
+  window.addEventListener('resize', resizeParticles);
+  initParticles();
+  animParticles();
+
+  // ─── LETTER SPLIT ───
+  function splitLetters(el) {
+    const text = el.innerHTML;
+    let html = '';
+    let inTag = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (ch === '<') { inTag = true; html += ch; continue; }
+      if (ch === '>') { inTag = false; html += ch; continue; }
+      if (inTag) { html += ch; continue; }
+      if (ch === ' ') { html += ' '; continue; }
+      if (ch === '\n') { html += '\n'; continue; }
+      html += `<span class="letter">${ch}</span>`;
+    }
+    el.innerHTML = html;
+  }
+  document.querySelectorAll('[data-split]').forEach(splitLetters);
+
+  function animateLetters(el) {
+    const letters = el.querySelectorAll('.letter');
+    letters.forEach((l, i) => {
+      setTimeout(() => l.classList.add('in'), i * 28);
+    });
+  }
+
+  // ─── DWELL/REMAP ENGINE ───
+  function dwellDensity(t) {
+    let d = 1;
+    DWELL_CENTERS.forEach(c => {
+      const dt = (t - c) / DWELL_WIDTH;
+      d += (DWELL_PEAK - 1) * Math.exp(-0.5 * dt * dt);
+    });
+    return d;
+  }
+  const lutForward = new Float32Array(REMAP_N + 1);
+  let total = 0;
+  for (let i = 0; i <= REMAP_N; i++) {
+    lutForward[i] = total;
+    if (i < REMAP_N) total += dwellDensity(i / REMAP_N);
+  }
+  for (let i = 0; i <= REMAP_N; i++) lutForward[i] /= total;
+
+  function remapProgress(raw) {
+    let lo = 0, hi = REMAP_N;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (lutForward[mid] < raw) lo = mid + 1; else hi = mid;
+    }
+    return lo / REMAP_N;
+  }
+
+  // ─── CANVAS RESIZE ───
+  function resizeCanvas() {
+    canvas.width  = window.innerWidth  * DPR;
+    canvas.height = window.innerHeight * DPR;
+    canvas.style.width  = window.innerWidth  + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    ctx.scale(DPR, DPR);
+  }
+  resizeCanvas();
+  window.addEventListener('resize', () => { resizeCanvas(); drawFrame(Math.round(currentFrame)); });
+
+  // ─── FRAME LOADING ───
+  const frames = new Array(FRAME_COUNT).fill(null);
+  let loadedCount = 0;
+  let currentFrame = 0;
+  let targetFrame  = 0;
+  let animStarted  = false;
+
+  function frameNum(i) {
+    return String(i + 1).padStart(4, '0');
+  }
+  function framePath(i) {
+    return `${FRAME_DIR}frame-${frameNum(i)}.webp`;
+  }
+
+  function drawFrame(idx) {
+    const f = frames[idx] || frames.find(Boolean);
+    if (!f) return;
+    ctx.clearRect(0, 0, canvas.width / DPR, canvas.height / DPR);
+    const cw = canvas.width  / DPR;
+    const ch = canvas.height / DPR;
+    const iw = f.width || f.naturalWidth;
+    const ih = f.height || f.naturalHeight;
+    if (!iw || !ih) return;
+    const scale = Math.max(cw / iw, ch / ih);
+    const dw = iw * scale, dh = ih * scale;
+    const dx = (cw - dw) / 2, dy = (ch - dh) / 2;
+    ctx.drawImage(f, dx, dy, dw, dh);
+  }
+
+  function updateLoader(pct) {
+    loaderBar.style.width = pct + '%';
+    loaderPct.textContent = Math.round(pct) + '%';
+  }
+
+  function loadFrame(i) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        frames[i] = img;
+        loadedCount++;
+        updateLoader(loadedCount / FRAME_COUNT * 100);
+        if (loadedCount === 1) drawFrame(0);
+        resolve();
+      };
+      img.onerror = () => { loadedCount++; updateLoader(loadedCount / FRAME_COUNT * 100); resolve(); };
+      img.src = framePath(i);
+    });
+  }
+
+  async function loadAllFrames() {
+    // Critical: load first, middle, last immediately
+    const critical = [0, Math.floor(FRAME_COUNT / 2), FRAME_COUNT - 1];
+    await Promise.all(critical.map(loadFrame));
+    drawFrame(0);
+
+    // Then load in batches of 10
+    const remaining = [];
+    for (let i = 0; i < FRAME_COUNT; i++) {
+      if (!critical.includes(i)) remaining.push(i);
+    }
+    for (let i = 0; i < remaining.length; i += 10) {
+      const batch = remaining.slice(i, i + 10);
+      await Promise.all(batch.map(loadFrame));
+    }
+  }
+
+  // ─── SCROLL ANIMATION ───
+  function getScrollProgress() {
+    const rect = animSec.getBoundingClientRect();
+    return Math.max(0, Math.min(1, -rect.top / (rect.height - window.innerHeight)));
+  }
+
+  let lastSectionIdx = -1;
+  let heroAnimated = false;
+
+  function updateSections(progress) {
+    sections.forEach(sec => {
+      const showAt = parseFloat(sec.dataset.showAt);
+      const hideAt = parseFloat(sec.dataset.hideAt);
+      const vis    = progress >= showAt && progress < hideAt;
+      if (vis && !sec.classList.contains('visible')) {
+        sec.classList.add('visible');
+        // Animate letters for hero
+        if (sec.id === 'sec-hero' && !heroAnimated) {
+          heroAnimated = true;
+          animateLetters(sec);
+          animateStats(sec);
+        }
+      } else if (!vis && sec.classList.contains('visible')) {
+        sec.classList.remove('visible');
+        if (sec.id === 'sec-hero') heroAnimated = false;
+      }
+    });
+  }
+
+  const TINT_OPACITIES = [0.05, 0.04, 0.06, 0.05, 0.04, 0.06];
+  function updateTint(progress) {
+    const idx = Math.min(5, Math.floor(progress * 6));
+    tintEl.style.opacity = TINT_OPACITIES[idx];
+  }
+
+  function updateChapters(progress) {
+    const chap = Math.min(5, Math.floor(progress * 6));
+    chapDots.forEach((d, i) => {
+      d.classList.toggle('active', i === chap);
+    });
+    chapFills.forEach((f, i) => {
+      if (i < chap) f.style.height = '100%';
+      else if (i === chap) {
+        const local = (progress * 6) - chap;
+        f.style.height = (local * 100) + '%';
+      } else f.style.height = '0%';
+    });
+  }
+
+  function animate() {
+    if (!animStarted) { requestAnimationFrame(animate); return; }
+    const rawProgress = getScrollProgress();
+    const remapped    = remapProgress(rawProgress);
+    targetFrame = Math.floor(remapped * (FRAME_COUNT - 1));
+    currentFrame += (targetFrame - currentFrame) * LERP_FACTOR;
+    drawFrame(Math.round(currentFrame));
+    updateSections(rawProgress);
+    updateChapters(rawProgress);
+    updateTint(rawProgress);
+    requestAnimationFrame(animate);
+  }
+  requestAnimationFrame(animate);
+
+  // ─── STAT COUNTER ANIMATION ───
+  function animateStats(container) {
+    container.querySelectorAll('[data-target]').forEach(el => {
+      const target = parseInt(el.dataset.target, 10);
+      const start  = Date.now();
+      const dur    = 1500;
+      function tick() {
+        const elapsed = Date.now() - start;
+        const t = Math.min(1, elapsed / dur);
+        const ease = 1 - Math.pow(1 - t, 3);
+        el.textContent = Math.round(ease * target);
+        if (t < 1) requestAnimationFrame(tick);
+      }
+      tick();
+    });
+  }
+
+  // ─── GALLERY ───
+  const galleryItems = document.querySelectorAll('.gallery-item');
+  const galleryObs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('revealed'); galleryObs.unobserve(e.target); }
+    });
+  }, { threshold: 0.15 });
+  galleryItems.forEach(item => galleryObs.observe(item));
+
+  // Parallax on gallery
+  function updateParallax() {
+    const scrollY = window.scrollY;
+    galleryItems.forEach(item => {
+      const px    = parseFloat(item.dataset.parallax) || 0;
+      const rect  = item.getBoundingClientRect();
+      const center = rect.top + rect.height / 2 - window.innerHeight / 2;
+      const offset = (center / window.innerHeight) * px;
+      const img = item.querySelector('img');
+      if (img) img.style.transform = `scale(1.08) translateY(${offset}px)`;
+    });
+    requestAnimationFrame(updateParallax);
+  }
+  requestAnimationFrame(updateParallax);
+  // Reset hover transform
+  galleryItems.forEach(item => {
+    item.addEventListener('mouseenter', () => {
+      const img = item.querySelector('img');
+      if (img) img.style.transition = 'transform 0.6s ease';
+    });
+    item.addEventListener('mouseleave', () => {
+      const img = item.querySelector('img');
+      if (img) img.style.transition = 'transform 0.6s ease';
+    });
+  });
+
+  // ─── INIT ───
+  loadAllFrames().then(() => {
+    setTimeout(() => {
+      loaderEl.classList.add('out');
+      setTimeout(() => { loaderEl.style.display = 'none'; }, 900);
+      animStarted = true;
+      // Show first section immediately
+      const hero = document.getElementById('sec-hero');
+      hero.classList.add('visible');
+      animateLetters(hero);
+      animateStats(hero);
+    }, 300);
+  });
+
+})();
+</script>
+</body>
+</html>
